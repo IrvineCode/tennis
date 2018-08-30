@@ -1,81 +1,41 @@
-import React, { Component } from 'react';
-import './App.css';
-import { db } from './utils/db';
-import Post from './components/Post';
+import React from 'react';
+import Main from './Main';
+import { Signup, Login } from './components/Signup';
+import { BrowserRouter as Router, Route } from 'react-router-dom';
+import Nav from './components/Nav';
+import { firebase } from './utils/db';
 
-class App extends Component {
+class App extends React.Component {
 	constructor() {
 		super();
 		this.state = {
-			postings: [],
-			titleInput: ''
+			user: undefined
 		};
 	}
 	componentDidMount() {
-		this.list();
-	}
-	list() {
-		db.collection('postings').get().then((snapshot) => {
-			this.setState({
-				postings: snapshot.docs,
-				titleInput: ''
-			});
-		});
-	}
-	onDelete(id) {
-		this.setState({
-			postings: this.state.postings.filter((p) => p.id !== id)
-		});
-
-		db.collection('postings').doc(id).delete();
-	}
-	onAdd() {
-		let data = {
-			title: this.state.titleInput,
-			name: 'daniel'
-		};
-
-		let newPost = {
-			id: new Date().getTime(),
-			tempId: true,
-			data: () => data
-		};
-
-		this.setState({
-			postings: [ ...this.state.postings, newPost ]
-		});
-
-		db.collection('postings').add(data).then((docref) => {
-			let newPostings = this.state.postings.map((p) => {
-				if (p.id === newPost.id) {
-					let newPost = { ...p };
-					newPost.id = docref.id;
-					newPost.tempId = false;
-					return newPost;
-				} else return p;
-			});
-
-			this.setState({ postings: newPostings });
-		});
-	}
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        this.setState({user: user});
+      } else {
+        this.setState({user: undefined});
+      }
+    });
+  }
 	render() {
 		return (
-			<div className="App">
-				<h1>Tennis App</h1>
+			<Router>
+				<div>
+					<h3>Welcome {this.state.user ? this.state.user.email : 'guest'}</h3>
+					<Nav />
 
-				{this.state.postings.map((post) => <Post post={post} onDelete={this.onDelete.bind(this)} />)}
+          {
+            !this.state.user && <Login />
+          }
 
-				<div className="form">
-					<input
-						type="text"
-						value={this.state.titleInput}
-						onChange={(event) => {
-							this.setState({ titleInput: event.target.value });
-						}}
-					/>
-					<button onClick={this.onAdd.bind(this)}>ADD</button>
+					<Route exact path="/" component={Main} />
+					<Route path="/signup" component={Signup} />
 				</div>
-			</div>
+			</Router>
 		);
 	}
 }
